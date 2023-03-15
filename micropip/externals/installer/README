@@ -1,0 +1,4 @@
+- pypa/installer 0.6.0 + some patches
+- Removed: _scripts, __main__.py
+- search for *PYODIDE* in the code for changes
+

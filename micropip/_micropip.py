@@ -36,8 +36,8 @@ from ._compat import (
     loadedPackages,
     loadPackage,
     to_js,
-    wheel_dist_info_dir,
 )
+from .externals.installer import install as installer_install
 from .externals.pip._internal.utils.wheel import pkg_resources_distribution_for_wheel
 from .package import PackageDict, PackageMetadata
 
@@ -195,13 +195,6 @@ class WheelInfo:
         if sha256_actual != sha256_expected:
             raise ValueError("Contents don't match hash")
 
-    def extract(self, target: Path) -> None:
-        assert self.data
-        with ZipFile(self.data) as zf:
-            zf.extractall(target)
-        dist_info_name: str = wheel_dist_info_dir(ZipFile(self.data), self.name)
-        self.dist_info = target / dist_info_name
-
     def requires(self, extras: set[str]) -> list[str]:
         if not self._dist:
             raise RuntimeError(
@@ -211,30 +204,37 @@ class WheelInfo:
         self._requires = requires
         return requires
 
-    def write_dist_info(self, file: str, content: str) -> None:
-        assert self.dist_info
-        (self.dist_info / file).write_text(content)
-
-    def set_installer(self) -> None:
-        assert self.data
-        wheel_source = "pypi" if self.digests is not None else self.url
-
-        self.write_dist_info("PYODIDE_SOURCE", wheel_source)
-        self.write_dist_info("PYODIDE_URL", self.url)
-        self.write_dist_info("PYODIDE_SHA256", _generate_package_hash(self.data))
-        self.write_dist_info("INSTALLER", "micropip")
-        if self._requires:
-            self.write_dist_info(
-                "PYODIDE_REQUIRES", json.dumps(sorted(x.name for x in self._requires))
-            )
-        name = self.project_name
-        assert name
-        setattr(loadedPackages, name, wheel_source)
-
     async def load_libraries(self, target: Path) -> None:
         assert self.data
         dynlibs = get_dynlibs(self.data, ".whl", target)
         await gather(*map(lambda dynlib: loadDynlib(dynlib, False), dynlibs))
+
+    def _get_extra_metadata(self) -> dict[str, bytes]:
+        assert self.data
+        wheel_source = "pypi" if self.digests is not None else self.url
+
+        metadata: dict[str, bytes] = {
+            "PYODIDE_SOURCE": wheel_source.encode("utf-8"),
+            "PYODIDE_URL": self.url.encode("utf-8"),
+            "PYODIDE_SHA256": _generate_package_hash(self.data).encode("utf-8"),
+            "INSTALLER": b"micropip",
+        }
+
+        if self._requires:
+            metadata["PYODIDE_REQUIRES"] = json.dumps(
+                sorted(x.name for x in self._requires)
+            ).encode("utf-8")
+
+        return metadata
+
+    def _install_inner(self, target: Path) -> None:
+        name = self.project_name
+        metadata = self._get_extra_metadata()
+
+        assert name
+
+        installer_install(self.data, target, metadata)
+        setattr(loadedPackages, name, metadata["PYODIDE_SOURCE"].decode("utf-8"))
 
     async def install(self, target: Path) -> None:
         if not self.data:
@@ -242,9 +242,8 @@ class WheelInfo:
                 "Micropip internal error: attempted to install wheel before downloading it?"
             )
         self.validate()
-        self.extract(target)
+        self._install_inner(target)
         await self.load_libraries(target)
-        self.set_installer()
 
 
 FAQ_URLS = {
