@@ -40,6 +40,7 @@ from ._compat import (
 )
 from .externals.pip._internal.utils.wheel import pkg_resources_distribution_for_wheel
 from .package import PackageDict, PackageMetadata
+from .uninstall import uninstall
 
 
 async def _get_pypi_json(pkgname: str, fetch_kwargs: dict[str, str]) -> Any:
@@ -324,6 +325,7 @@ class Transaction:
     keep_going: bool
     deps: bool
     pre: bool
+    force_reinstall: bool
     fetch_kwargs: dict[str, str]
 
     locked: dict[str, PackageMetadata] = field(default_factory=dict)
@@ -363,6 +365,7 @@ class Transaction:
         if req.name in self.locked:
             ver = self.locked[req.name].version
 
+        # package not installed
         if not ver:
             return False
 
@@ -370,9 +373,8 @@ class Transaction:
             # installed version matches, nothing to do
             return True
 
-        raise ValueError(
-            f"Requested '{req}', " f"but {req.name}=={ver} is already installed"
-        )
+        # installed version doesn't match
+        return False
 
     async def add_requirement_inner(
         self,
@@ -424,7 +426,7 @@ class Transaction:
                 return
         # Is some version of this package is already installed?
         req.name = canonicalize_name(req.name)
-        if self.check_version_satisfied(req):
+        if not self.force_reinstall and self.check_version_satisfied(req):
             return
 
         # If there's a Pyodide package that matches the version constraint, use
@@ -449,7 +451,7 @@ class Transaction:
             else:
                 return
 
-        if self.check_version_satisfied(req):
+        if not self.force_reinstall and self.check_version_satisfied(req):
             # Maybe while we were downloading pypi_json some other branch
             # installed the wheel?
             return
@@ -480,6 +482,7 @@ async def install(
     deps: bool = True,
     credentials: str | None = None,
     pre: bool = False,
+    force_reinstall: bool = False,
 ) -> None:
     """Install the given package and all of its dependencies.
 
@@ -548,6 +551,10 @@ async def install(
         If ``True``, include pre-release and development versions. By default,
         micropip only finds stable versions.
 
+    force_reinstall :
+
+        If ``True``, reinstall all packages even if they are already up-to-date.
+
     """
     ctx = default_environment()
     if isinstance(requirements, str):
@@ -571,6 +578,7 @@ async def install(
         keep_going=keep_going,
         deps=deps,
         pre=pre,
+        force_reinstall=force_reinstall,
         fetch_kwargs=fetch_kwargs,
     )
     await transaction.gather_requirements(requirements)
@@ -581,6 +589,14 @@ async def install(
             f"Can't find a pure Python 3 wheel for: {failed_requirements}\n"
             f"See: {FAQ_URLS['cant_find_wheel']}\n"
         )
+
+    # uninstall packages that are installed
+    uninstall_packages = set([pkg.name for pkg in transaction.wheels]) | set(
+        [pkg.name for pkg in transaction.pyodide_packages]
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        uninstall(uninstall_packages)
 
     wheel_promises = []
     # Install built-in packages

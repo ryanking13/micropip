@@ -1,13 +1,14 @@
 import importlib
 import importlib.metadata
 import warnings
+from collections.abc import Iterable
 from importlib.metadata import Distribution
 
 from ._compat import loadedPackages
 from ._utils import get_files_in_distribution, get_root
 
 
-def uninstall(packages: str | list[str]) -> None:
+def uninstall(packages: str | Iterable[str]) -> None:
     """Uninstall the given packages.
 
     This function only supports uninstalling packages that are installed
