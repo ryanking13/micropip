@@ -4,8 +4,8 @@ import warnings
 from collections.abc import Iterable
 from importlib.metadata import Distribution
 
-from ._compat import loadedPackages
-from ._utils import get_files_in_distribution, get_root
+from .._compat import loadedPackages
+from .._utils import get_files_in_distribution, get_root
 
 
 def uninstall(packages: str | Iterable[str]) -> None:
@@ -34,7 +34,9 @@ def uninstall(packages: str | Iterable[str]) -> None:
             dist = importlib.metadata.distribution(package)
             distributions.append(dist)
         except importlib.metadata.PackageNotFoundError:
-            warnings.warn(f"WARNING: Skipping '{package}' as it is not installed.")
+            warnings.warn(
+                f"WARNING: Skipping '{package}' as it is not installed.", stacklevel=1
+            )
 
     for dist in distributions:
         # Note: this value needs to be retrieved before removing files, as
@@ -56,7 +58,8 @@ def uninstall(packages: str | Iterable[str]) -> None:
                     continue
 
                 warnings.warn(
-                    f"WARNING: A file '{file}' listed in the metadata of '{dist.name}' does not exist."
+                    f"WARNING: A file '{file}' listed in the metadata of '{dist.name}' does not exist.",
+                    stacklevel=1,
                 )
 
                 continue
@@ -73,7 +76,8 @@ def uninstall(packages: str | Iterable[str]) -> None:
             except OSError:
                 warnings.warn(
                     f"WARNING: A directory '{directory}' is not empty after uninstallation of '{name}'. "
-                    "This might cause problems when installing a new version of the package. "
+                    "This might cause problems when installing a new version of the package. ",
+                    stacklevel=1,
                 )
 
         if hasattr(loadedPackages, name):
@@ -81,7 +85,8 @@ def uninstall(packages: str | Iterable[str]) -> None:
         else:
             # This should not happen, but just in case
             warnings.warn(
-                f"WARNING: a package '{name}' was not found in loadedPackages."
+                f"WARNING: a package '{name}' was not found in loadedPackages.",
+                stacklevel=1,
             )
 
     importlib.invalidate_caches()
