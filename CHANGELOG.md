@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `verbose` parameter to micropip.install and micropip.uninstall
+  [#60](https://github.com/pyodide/micropip/pull/60)
+
+## [0.3.0] - 2023/03/29
+
+### Added
+
 - Added `micropip.uninstall` to uninstall packages
   [#55](https://github.com/pyodide/micropip/pull/55)
 
