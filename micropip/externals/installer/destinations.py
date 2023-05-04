@@ -15,9 +15,9 @@ from typing import (
     Union,
 )
 
-from installer.records import Hash, RecordEntry
+from .installer.records import Hash, RecordEntry
 # from installer.scripts import Script  # *PYODIDE*: No scripts
-from installer.utils import (
+from .installer.utils import (
     Scheme,
     construct_record_file,
     copyfileobj_with_hashing,

@@ -4,11 +4,11 @@ import posixpath
 from io import BytesIO
 from typing import Dict, Tuple, cast
 
-from installer.destinations import WheelDestination
-from installer.exceptions import InvalidWheelSource
-from installer.records import RecordEntry
-from installer.sources import WheelSource
-from installer.utils import SCHEME_NAMES, Scheme, parse_entrypoints, parse_metadata_file
+from .installer.destinations import WheelDestination
+from .installer.exceptions import InvalidWheelSource
+from .installer.records import RecordEntry
+from .installer.sources import WheelSource
+from .installer.utils import SCHEME_NAMES, Scheme, parse_entrypoints, parse_metadata_file
 
 __all__ = ["install"]
 

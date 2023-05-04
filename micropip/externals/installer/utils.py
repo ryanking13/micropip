@@ -25,7 +25,7 @@ from typing import (
     cast,
 )
 
-from installer.records import RecordEntry
+from .installer.records import RecordEntry
 
 if TYPE_CHECKING:
     from installer.scripts import LauncherKind, ScriptSection

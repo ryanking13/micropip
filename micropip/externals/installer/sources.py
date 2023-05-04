@@ -7,8 +7,8 @@ import zipfile
 from contextlib import contextmanager
 from typing import BinaryIO, Iterator, List, Tuple, cast
 
-from installer.records import parse_record_file
-from installer.utils import parse_wheel_filename
+from .installer.records import parse_record_file
+from .installer.utils import parse_wheel_filename
 
 WheelContentElement = Tuple[Tuple[str, str, str], BinaryIO, bool]
 
