@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..wheelinfo import PackageData
@@ -51,13 +50,12 @@ class CompatibilityLayer(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_dynlibs(archive: IO[bytes], suffix: str, target_dir: Path) -> list[str]:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    async def loadDynlibsFromPackage(
-        pkg_metadata: "PackageData", dynlibs: list[str]
+    async def install(
+        data: bytes,
+        filename: str,
+        install_dir: str,
+        installer: str,
+        source: str,
     ) -> None:
         pass
 

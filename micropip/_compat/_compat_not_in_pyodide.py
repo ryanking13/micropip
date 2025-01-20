@@ -1,14 +1,12 @@
+import io
 import re
-from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any
+from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from urllib.response import addinfourl
+import zipfile
 
 from .compatibility_layer import CompatibilityLayer
-
-if TYPE_CHECKING:
-    from ..wheelinfo import PackageData
 
 
 class CompatibilityNotInPyodide(CompatibilityLayer):
@@ -47,6 +45,17 @@ class CompatibilityNotInPyodide(CompatibilityLayer):
         return CompatibilityNotInPyodide._fetch(url, kwargs=kwargs).read()
 
     @staticmethod
+    async def install(
+        data: bytes,
+        filename: str,
+        install_dir: str,
+        installer: str,
+        source: str,
+    ) -> None:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            zf.extractall(install_dir)
+
+    @staticmethod
     async def fetch_string_and_headers(
         url: str, kwargs: dict[str, Any]
     ) -> tuple[str, dict[str, str]]:
@@ -57,16 +66,6 @@ class CompatibilityNotInPyodide(CompatibilityLayer):
 
         headers = {k.lower(): v for k, v in response.headers.items()}
         return response.read().decode(), headers
-
-    @staticmethod
-    def get_dynlibs(archive: IO[bytes], suffix: str, target_dir: Path) -> list[str]:
-        return []
-
-    @staticmethod
-    async def loadDynlibsFromPackage(
-        pkg_metadata: "PackageData", dynlibs: list[str]
-    ) -> None:
-        pass
 
     @staticmethod
     async def loadPackage(names: str | list[str]) -> None:

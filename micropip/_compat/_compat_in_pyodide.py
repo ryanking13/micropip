@@ -1,22 +1,20 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urlparse
 
-if TYPE_CHECKING:
-    pass
 
-from pyodide._package_loader import get_dynlibs
 from pyodide.ffi import IN_BROWSER, to_js
 from pyodide.http import HttpStatusError, pyfetch
 
 from .compatibility_layer import CompatibilityLayer
 
 try:
+    from js import Uint8Array
     import pyodide_js
     from pyodide_js import loadedPackages, loadPackage
     from pyodide_js._api import (  # type: ignore[import]
+        install,
         loadBinaryFile,
-        loadDynlibsFromPackage,
     )
 
     REPODATA_PACKAGES = pyodide_js._api.repodata_packages.to_py()
@@ -70,11 +68,18 @@ class CompatibilityInPyodide(CompatibilityLayer):
 
         return content, headers
 
+    @staticmethod
+    async def install(
+        data: bytes,
+        filename: str,
+        install_dir: str,
+        installer: str,
+        source: str,
+    ) -> None:
+        buffer = Uint8Array.new(data)
+        await install(buffer, filename, install_dir, installer, source)
+
     loadedPackages = loadedPackages
-
-    get_dynlibs = get_dynlibs
-
-    loadDynlibsFromPackage = loadDynlibsFromPackage
 
     loadPackage = loadPackage
 

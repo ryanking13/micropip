@@ -16,6 +16,7 @@ from ._compat import (
     get_dynlibs,
     loadDynlibsFromPackage,
     loadedPackages,
+    install as _install_wheel,
 )
 from ._utils import parse_wheel_filename
 from .metadata import Metadata, safe_name, wheel_dist_info_dir
@@ -128,8 +129,13 @@ class WheelInfo:
                 "Micropip internal error: attempted to install wheel before downloading it?"
             )
         _validate_sha256_checksum(self._data, self.sha256)
-        self._extract(target)
-        await self._load_libraries(target)
+        await _install_wheel(
+            self._data,
+            self.filename,
+            install_dir=target,
+            installer="micropip",
+            source=self.url,
+        )
         self._set_installer()
 
     async def download(self, fetch_kwargs: dict[str, Any]):
@@ -209,12 +215,6 @@ class WheelInfo:
                     "Check if the server is sending the correct 'Access-Control-Allow-Origin' header."
                 ) from e
 
-    def _extract(self, target: Path) -> None:
-        assert self._data
-        with zipfile.ZipFile(io.BytesIO(self._data)) as zf:
-            zf.extractall(target)
-            self._dist_info = target / wheel_dist_info_dir(zf, self.name)
-
     def _set_installer(self) -> None:
         """
         Set the installer metadata in the wheel's .dist-info directory.
@@ -236,21 +236,6 @@ class WheelInfo:
     def _write_dist_info(self, file: str, content: str) -> None:
         assert self._dist_info
         (self._dist_info / file).write_text(content)
-
-    async def _load_libraries(self, target: Path) -> None:
-        """
-        Compiles shared libraries (WASM modules) in the wheel and loads them.
-        """
-        assert self._data
-
-        pkg = PackageData(
-            file_name=self.filename,
-            package_type="package",
-            shared_library=False,
-        )
-
-        dynlibs = get_dynlibs(io.BytesIO(self._data), ".whl", target)
-        await loadDynlibsFromPackage(pkg, dynlibs)
 
 
 def _validate_sha256_checksum(data: bytes, expected: str | None = None) -> None:

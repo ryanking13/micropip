@@ -26,11 +26,9 @@ fetch_string_and_headers = compatibility_layer.fetch_string_and_headers
 
 loadedPackages = compatibility_layer.loadedPackages
 
-loadDynlibsFromPackage = compatibility_layer.loadDynlibsFromPackage
+install = compatibility_layer.install
 
 loadPackage = compatibility_layer.loadPackage
-
-get_dynlibs = compatibility_layer.get_dynlibs
 
 to_js = compatibility_layer.to_js
 
@@ -43,9 +41,8 @@ __all__ = [
     "fetch_bytes",
     "fetch_string_and_headers",
     "loadedPackages",
-    "loadDynlibsFromPackage",
+    "install",
     "loadPackage",
-    "get_dynlibs",
     "to_js",
     "HttpStatusError",
 ]
