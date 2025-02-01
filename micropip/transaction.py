@@ -60,6 +60,8 @@ class Transaction:
             for constraint, msg in messages.items():
                 logger.info("Transaction: constraint %s discarded: %s", constraint, msg)
 
+        self.provider = MicropipProvider(...)
+
     async def gather_requirements(
         self,
         requirements: list[str] | list[Requirement],
