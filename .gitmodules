@@ -3,3 +3,6 @@
 [submodule "micropip/_vendored/packaging"]
 	path = micropip/_vendored/packaging
 	url = https://github.com/pypa/packaging/
+[submodule "micropip/_vendored/resolvelib"]
+	path = micropip/_vendored/resolvelib
+	url = https://github.com/sarugaku/resolvelib/
