@@ -14,3 +14,20 @@ include micropip/_vendored/packaging/LICENSE.APACHE
 include micropip/_vendored/packaging/LICENSE.BSD
 
 include micropip/_vendored/packaging/README.rst
+
+exclude micropip/_vendored/resolvelib/.github/*
+exclude micropip/_vendored/resolvelib/examples/*
+exclude micropip/_vendored/resolvelib/news/*
+exclude micropip/_vendored/resolvelib/tests/*
+exclude micropip/_vendored/resolvelib/.editorconfig
+exclude micropip/_vendored/resolvelib/.gitignore
+exclude micropip/_vendored/resolvelib/CHANGELOG.rst
+exclude micropip/_vendored/resolvelib/CODE_OF_CONDUCT.md
+exclude micropip/_vendored/resolvelib/DEVELOPMENT.rst
+exclude micropip/_vendored/resolvelib/MANIFEST.in
+exclude micropip/_vendored/resolvelib/noxfile.py
+exclude micropip/_vendored/resolvelib/pyproject.toml
+exclude micropip/_vendored/resolvelib/README.rst
+
+include micropip/_vendored/resolvelib/LICENSE
+
