@@ -454,3 +454,13 @@ def run_async_py_in_js(selenium_standalone_micropip):
             selenium_standalone_micropip.run_js(js)
 
     return _run
+
+
+@pytest.fixture
+def host_compat_layer():
+    """
+    Fixture to provide the compatibility layer for the host environment.
+    """
+    from micropip._compat._compat_not_in_pyodide import CompatibilityNotInPyodide
+
+    yield CompatibilityNotInPyodide

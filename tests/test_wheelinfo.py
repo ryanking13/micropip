@@ -157,7 +157,7 @@ async def test_download_pep658_metadata(wheel_catalog):
 
 
 @pytest.mark.asyncio
-async def test_download_pep658_metadata_checksum(wheel_catalog):
+async def test_download_pep658_metadata_checksum(wheel_catalog, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
     sha256 = "dummy-sha256"
     size = 1234
@@ -170,6 +170,7 @@ async def test_download_pep658_metadata_checksum(wheel_catalog):
         sha256,
         size,
         core_metadata={"sha256": "dummy-sha256"},
+        compat_layer=host_compat_layer,
     )
 
     assert wheel._metadata is None

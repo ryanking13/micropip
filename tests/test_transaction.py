@@ -18,11 +18,11 @@ from micropip._vendored.packaging.src.packaging.tags import Tag
     "protocol",
     ["http:", "https:", "file:", "emfs:", ""],
 )
-def test_parse_wheel_url1(protocol, path):
+def test_parse_wheel_url1(protocol, path, host_compat_layer):
     from micropip.transaction import WheelInfo
 
     url = protocol + path
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(url, compat_layer=host_compat_layer)
 
     assert wheel.name == "snowballstemmer"
     assert str(wheel.version) == "2.0.0"
@@ -34,20 +34,20 @@ def test_parse_wheel_url1(protocol, path):
     )
 
 
-def test_parse_wheel_url2():
+def test_parse_wheel_url2(host_compat_layer):
     from micropip.transaction import WheelInfo
 
     msg = r"Invalid wheel filename \(wrong number of parts\)"
     with pytest.raises(ValueError, match=msg):
         url = "https://a/snowballstemmer-2.0.0-py2.whl"
-        WheelInfo.from_url(url)
+        WheelInfo.from_url(url, compat_layer=host_compat_layer)
 
 
-def test_parse_wheel_url3():
+def test_parse_wheel_url3(host_compat_layer):
     from micropip.transaction import WheelInfo
 
     url = "http://a/scikit_learn-0.22.2.post1-cp35-cp35m-macosx_10_9_intel.whl"
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(url, compat_layer=host_compat_layer)
     assert wheel.name == "scikit-learn"
     assert wheel.tags == frozenset({Tag("cp35", "cp35m", "macosx_10_9_intel")})
 
