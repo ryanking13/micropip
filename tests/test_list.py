@@ -1,42 +1,45 @@
 import pytest
-from conftest import mock_fetch_cls
-
-import micropip
 
 
 @pytest.mark.asyncio
-async def test_list_pypi_package(mock_fetch: mock_fetch_cls) -> None:
+async def test_list_pypi_package(host_micropip_with_mock_fetch) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     mock_fetch.add_pkg_version(dummy)
 
     await micropip.install(dummy)
-    pkg_list = micropip.list()
+    pkg_list = micropip.list_packages()
     assert dummy in pkg_list
     assert pkg_list[dummy].source.lower() == "pypi"
 
 
 @pytest.mark.asyncio
-async def test_list_wheel_package(mock_fetch: mock_fetch_cls) -> None:
+async def test_list_wheel_package(host_micropip_with_mock_fetch) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     mock_fetch.add_pkg_version(dummy)
     dummy_url = f"https://dummy.com/{dummy}-1.0.0-py3-none-any.whl"
 
     await micropip.install(dummy_url)
 
-    pkg_list = micropip.list()
+    pkg_list = micropip.list_packages()
     assert dummy in pkg_list
     assert pkg_list[dummy].source.lower() == dummy_url
 
 
 @pytest.mark.asyncio
-async def test_list_wheel_name_mismatch(mock_fetch: mock_fetch_cls) -> None:
+async def test_list_wheel_name_mismatch(host_micropip_with_mock_fetch) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy_pkg_name = "dummy-Dummy"
     mock_fetch.add_pkg_version(dummy_pkg_name)
     dummy_url = "https://dummy.com/dummy_dummy-1.0.0-py3-none-any.whl"
 
     await micropip.install(dummy_url)
 
-    pkg_list = micropip.list()
+    pkg_list = micropip.list_packages()
     assert dummy_pkg_name in pkg_list
     assert pkg_list[dummy_pkg_name].source.lower() == dummy_url
 

@@ -2,6 +2,7 @@ import functools
 import gzip
 import io
 import sys
+from urllib.parse import urlparse
 import zipfile
 from dataclasses import dataclass
 from importlib.metadata import Distribution, PackageNotFoundError
@@ -15,6 +16,7 @@ from pytest_pyodide import spawn_web_server
 from pytest_pyodide.runner import JavascriptException
 
 from micropip._vendored.packaging.src.packaging.utils import parse_wheel_filename
+from micropip import PackageManager
 
 
 def pytest_addoption(parser):
@@ -305,7 +307,7 @@ class mock_fetch_cls:
         self.metadata_map[filename] = metadata
         self.top_level_map[filename] = top_level
 
-    async def query_package(self, pkgname, index_urls, kwargs):
+    async def query_package(self, pkgname, index_urls, *args, **kwargs):
         from micropip.package_index import ProjectInfo
 
         try:
@@ -317,12 +319,10 @@ class mock_fetch_cls:
             ) from e
 
     async def _fetch_bytes(self, url, kwargs):
-        from micropip.transaction import WheelInfo
+        parsed_url = urlparse(url)
+        filename = Path(parsed_url.path).name
+        name, version, _, _ = parse_wheel_filename(filename)
 
-        wheel_info = WheelInfo.from_url(url)
-        version = wheel_info.version
-        name = wheel_info.name
-        filename = wheel_info.filename
         metadata = self.metadata_map[filename]
         metadata_str = "\n".join(": ".join(x) for x in metadata)
         toplevel = self.top_level_map[filename]
@@ -464,3 +464,28 @@ def host_compat_layer():
     from micropip._compat._compat_not_in_pyodide import CompatibilityNotInPyodide
 
     yield CompatibilityNotInPyodide
+
+
+@pytest.fixture
+def host_micropip(host_compat_layer):
+    manager = PackageManager(host_compat_layer)
+
+    yield manager
+
+
+@pytest.fixture
+def host_micropip_with_mock_fetch(host_compat_layer, monkeypatch):
+    from micropip import package_index
+
+    result = mock_fetch_cls()
+    class CompatibilityLayerWithMockFetch(host_compat_layer):
+        @staticmethod
+        def fetch_bytes(url, kwargs):
+            return result._fetch_bytes(url, kwargs)
+
+    # TODO: do not use monkeypatch
+    monkeypatch.setattr(package_index, "query_package", result.query_package)
+
+    manager = PackageManager(CompatibilityLayerWithMockFetch)
+
+    yield manager, result

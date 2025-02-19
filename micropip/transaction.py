@@ -91,7 +91,7 @@ class Transaction:
 
         if urlparse(req).path.endswith(".whl"):
             # custom download location
-            wheel = WheelInfo.from_url(req)
+            wheel = WheelInfo.from_url(req, compat_layer=self._compat_layer)
             check_compatible(wheel.filename)
             return await self.add_wheel(wheel, extras=set(), specifier="")
 

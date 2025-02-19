@@ -1,10 +1,9 @@
 import pytest
-from conftest import mock_fetch_cls
 
 
 @pytest.mark.asyncio
-async def test_freeze(mock_fetch: mock_fetch_cls, mock_importlib: None) -> None:
-    import micropip
+async def test_freeze(host_micropip_with_mock_fetch, mock_importlib: None) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
 
     dummy = "dummy"
     dep1 = "dep1"
@@ -34,9 +33,9 @@ async def test_freeze(mock_fetch: mock_fetch_cls, mock_importlib: None) -> None:
 
 @pytest.mark.asyncio
 async def test_freeze_fix_depends(
-    mock_fetch: mock_fetch_cls, mock_importlib: None
+    host_micropip_with_mock_fetch, mock_importlib: None
 ) -> None:
-    import micropip
+    micropip, mock_fetch = host_micropip_with_mock_fetch
 
     dummy = "dummy"
     dep1 = "dep1"
