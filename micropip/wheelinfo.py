@@ -7,12 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import ParseResult, urlparse
 
-from ._compat import (
-    fetch_bytes,
-    get_dynlibs,
-    loadDynlibsFromPackage,
-    loadedPackages,
-)
+from ._compat import CompatibilityLayer
 from ._utils import parse_wheel_filename
 from ._vendored.packaging.src.packaging.requirements import Requirement
 from ._vendored.packaging.src.packaging.tags import Tag
@@ -33,6 +28,7 @@ class WheelInfo:
     """
     WheelInfo represents a wheel file and its metadata (e.g. URL and hash)
     """
+    _compat_layer: type[CompatibilityLayer]
 
     name: str
     version: Version
@@ -63,7 +59,7 @@ class WheelInfo:
         self.metadata_url = self.url + ".metadata"
 
     @classmethod
-    def from_url(cls, url: str) -> "WheelInfo":
+    def from_url(cls, url: str, *, compat_layer: type[CompatibilityLayer]) -> "WheelInfo":
         """Parse wheels URL and extract available metadata
 
         See https://www.python.org/dev/peps/pep-0427/#file-name-convention
@@ -81,6 +77,7 @@ class WheelInfo:
         file_name = Path(parsed_url.path).name
         name, version, build, tags = parse_wheel_filename(file_name)
         return WheelInfo(
+            _compat_layer=compat_layer,
             name=name,
             version=version,
             filename=file_name,
@@ -100,12 +97,15 @@ class WheelInfo:
         sha256: str | None,
         size: int | None,
         core_metadata: DistributionMetadata = None,
+        *,
+        compat_layer: type[CompatibilityLayer],
     ) -> "WheelInfo":
         """Extract available metadata from response received from package index"""
         parsed_url = urlparse(url)
         _, _, build, tags = parse_wheel_filename(filename)
 
         return WheelInfo(
+            _compat_layer=compat_layer,
             name=name,
             version=version,
             filename=filename,
@@ -199,7 +199,7 @@ class WheelInfo:
                 f"Cannot download from a non-remote location: {url!r} ({self.parsed_url!r})"
             )
         try:
-            bytes = await fetch_bytes(url, fetch_kwargs)
+            bytes = await self._compat_layer.fetch_bytes(url, fetch_kwargs)
             return bytes
         except OSError as e:
             if self.parsed_url.hostname in [
@@ -237,7 +237,7 @@ class WheelInfo:
                 "PYODIDE_REQUIRES", json.dumps(sorted(x.name for x in self._requires))
             )
 
-        setattr(loadedPackages, self._project_name, wheel_source)
+        setattr(self._compat_layer.loadedPackages, self._project_name, wheel_source)
 
     def _write_dist_info(self, file: str, content: str) -> None:
         assert self._dist_info
@@ -255,8 +255,8 @@ class WheelInfo:
             shared_library=False,
         )
 
-        dynlibs = get_dynlibs(io.BytesIO(self._data), ".whl", target)
-        await loadDynlibsFromPackage(pkg, dynlibs)
+        dynlibs = self._compat_layer.get_dynlibs(io.BytesIO(self._data), ".whl", target)
+        await self._compat_layer.loadDynlibsFromPackage(pkg, dynlibs)
 
 
 def _validate_sha256_checksum(data: bytes, expected: str | None = None) -> None:

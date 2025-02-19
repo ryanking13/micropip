@@ -7,7 +7,7 @@ from importlib.metadata import PackageNotFoundError
 from urllib.parse import urlparse
 
 from . import package_index
-from ._compat import REPODATA_PACKAGES
+from ._compat import CompatibilityLayer
 from ._utils import (
     best_compatible_tag_index,
     check_compatible,
@@ -29,6 +29,8 @@ logger = logging.getLogger("micropip")
 
 @dataclass
 class Transaction:
+    _compat_layer: type[CompatibilityLayer]
+
     ctx: dict[str, str]
     ctx_extras: list[dict[str, str]]
     keep_going: bool
@@ -55,6 +57,8 @@ class Transaction:
         self.constrained_reqs, messages = validate_constraints(
             self.constraints, self.ctx
         )
+
+        self.lockfile_packages = self._compat_layer.lockfile_packages
 
         if self.verbose and messages:
             for constraint, msg in messages.items():
@@ -207,9 +211,9 @@ class Transaction:
         Find requirement from pyodide-lock.json. If the requirement is found,
         add it to the package list and return True. Otherwise, return False.
         """
-        locked_package = REPODATA_PACKAGES.get(req.name)
+        locked_package = self.lockfile_packages.get(req.name)
         if locked_package and req.specifier.contains(
-            REPODATA_PACKAGES[req.name]["version"], prereleases=True
+            self.lockfile_packages[req.name]["version"], prereleases=True
         ):
             version = locked_package["version"]
             self.pyodide_packages.append(
@@ -230,6 +234,7 @@ class Transaction:
             req.name,
             self.index_urls,
             self.fetch_kwargs,
+            compat_layer=self._compat_layer,
         )
 
         logger.debug("Transaction: got metadata %r for requirement %r", metadata, req)

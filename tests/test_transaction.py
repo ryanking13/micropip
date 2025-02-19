@@ -53,9 +53,11 @@ def test_parse_wheel_url3():
 
 
 def create_transaction(Transaction):
+    from micropip._compat import compatibility_layer
     from micropip.package_index import DEFAULT_INDEX_URLS
 
     return Transaction(
+        _compat_layer=compatibility_layer,
         wheels=[],
         locked={},
         keep_going=True,
