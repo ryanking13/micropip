@@ -234,7 +234,6 @@ class Transaction:
             req.name,
             self.index_urls,
             self.fetch_kwargs,
-            compat_layer=self._compat_layer,
         )
 
         logger.debug("Transaction: got metadata %r for requirement %r", metadata, req)

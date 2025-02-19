@@ -285,7 +285,7 @@ def test_last_version_and_best_tag_from_pypi(
     assert str(wheel.version) == new_version
 
 
-def test_search_pyodide_lock_first():
+def test_search_pyodide_lock_first(host_compat_layer):
     from micropip import package_index
     from micropip.transaction import Transaction
 
@@ -298,6 +298,7 @@ def test_search_pyodide_lock_first():
         fetch_kwargs={},
         verbose=False,
         index_urls=package_index.DEFAULT_INDEX_URLS,
+        _compat_layer=host_compat_layer,
     )
     assert t.search_pyodide_lock_first is True
 
@@ -310,13 +311,14 @@ def test_search_pyodide_lock_first():
         fetch_kwargs={},
         verbose=False,
         index_urls=["https://my.custom.index.com"],
+        _compat_layer=host_compat_layer,
     )
     assert t.search_pyodide_lock_first is False
 
 
 @pytest.mark.asyncio
 async def test_index_url_priority(
-    mock_importlib, wheel_base, monkeypatch, mock_package_index_simple_json_api
+    mock_importlib, wheel_base, monkeypatch, mock_package_index_simple_json_api, host_compat_layer
 ):
     # Test that if the index_urls are provided, package should be searched in
     # the index_urls first before searching in Pyodide lock file.
@@ -341,6 +343,7 @@ async def test_index_url_priority(
         ctx_extras=[],
         fetch_kwargs={},
         index_urls=mock_index_url,
+        _compat_layer=host_compat_layer,
     )
 
     await t.add_requirement("black")

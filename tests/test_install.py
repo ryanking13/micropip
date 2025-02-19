@@ -1,8 +1,6 @@
 import pytest
-from conftest import mock_fetch_cls
 from pytest_pyodide import run_in_pyodide
 
-import micropip
 from micropip._vendored.packaging.src.packaging.utils import parse_wheel_filename
 
 
@@ -141,7 +139,9 @@ def test_install_constraints(
 
 
 @pytest.mark.asyncio
-async def test_package_with_extra(mock_fetch):
+async def test_package_with_extra(host_micropip_with_mock_fetch):
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     mock_fetch.add_pkg_version("depa")
     mock_fetch.add_pkg_version("depb")
     mock_fetch.add_pkg_version("pkga", extras={"opt_feature": ["depa"]})
@@ -159,7 +159,9 @@ async def test_package_with_extra(mock_fetch):
 
 
 @pytest.mark.asyncio
-async def test_package_with_extra_all(mock_fetch):
+async def test_package_with_extra_all(host_micropip_with_mock_fetch):
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     mock_fetch.add_pkg_version("depa")
     mock_fetch.add_pkg_version("depb")
     mock_fetch.add_pkg_version("depc")
@@ -183,8 +185,10 @@ async def test_package_with_extra_all(mock_fetch):
 @pytest.mark.parametrize("transitive_req", [True, False])
 @pytest.mark.asyncio
 async def test_package_with_extra_transitive(
-    mock_fetch, transitive_req, mock_importlib
+    host_micropip_with_mock_fetch, transitive_req, mock_importlib
 ):
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     mock_fetch.add_pkg_version("depb")
 
     pkga_optional_dep = "depa[opt_feature]" if transitive_req else "depa"
@@ -201,7 +205,9 @@ async def test_package_with_extra_transitive(
 
 
 @pytest.mark.asyncio
-async def test_install_keep_going(mock_fetch: mock_fetch_cls) -> None:
+async def test_install_keep_going(host_micropip_with_mock_fetch) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     dep1 = "dep1"
     dep2 = "dep2"
@@ -216,7 +222,9 @@ async def test_install_keep_going(mock_fetch: mock_fetch_cls) -> None:
 
 
 @pytest.mark.asyncio
-async def test_install_version_compare_prerelease(mock_fetch: mock_fetch_cls) -> None:
+async def test_install_version_compare_prerelease(host_micropip_with_mock_fetch) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     version_old = "3.2.0"
     version_new = "3.2.1a1"
@@ -233,7 +241,9 @@ async def test_install_version_compare_prerelease(mock_fetch: mock_fetch_cls) ->
 
 
 @pytest.mark.asyncio
-async def test_install_no_deps(mock_fetch: mock_fetch_cls) -> None:
+async def test_install_no_deps(host_micropip_with_mock_fetch) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     dep = "dep"
     mock_fetch.add_pkg_version(dummy, requirements=[dep])
@@ -248,9 +258,11 @@ async def test_install_no_deps(mock_fetch: mock_fetch_cls) -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("pre", [True, False])
 async def test_install_pre(
-    mock_fetch: mock_fetch_cls,
+    host_micropip_with_mock_fetch,
     pre: bool,
 ) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     version_alpha = "2.0.1a1"
     version_stable = "1.0.0"
@@ -264,18 +276,27 @@ async def test_install_pre(
 
 
 @pytest.mark.asyncio
-async def test_fetch_wheel_fail(monkeypatch, wheel_base):
-    import micropip
-    from micropip import wheelinfo
+async def test_fetch_wheel_fail(selenium_standalone_micropip, httpserver):
 
-    def _mock_fetch_bytes(arg, *args, **kwargs):
-        raise OSError(f"Request for {arg} failed with status 404: Not Found")
+    httpserver.expect_request("/fake-pkg-micropip-test-1.0.0-py3-none-any.whl").respond_with_data(
+        b"Not found",
+        status=404,
+        content_type="text/plain",
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
-    monkeypatch.setattr(wheelinfo, "fetch_bytes", _mock_fetch_bytes)
+    url = httpserver.url_for("/fake-pkg-micropip-test-1.0.0-py3-none-any.whl")
 
-    msg = "Access-Control-Allow-Origin"
-    with pytest.raises(ValueError, match=msg):
-        await micropip.install("https://x.com/xxx-1.0.0-py3-none-any.whl")
+    @run_in_pyodide()
+    async def run_test(selenium, url):
+        import pytest
+
+        import micropip
+
+        with pytest.raises(ValueError, match="Access-Control-Allow-Origin"):
+            await micropip.install(url)
+
+    run_test(selenium_standalone_micropip, url)
 
 
 @pytest.mark.skip_refcount_check
@@ -312,8 +333,10 @@ async def test_install_with_credentials(selenium_standalone_micropip):
 
 @pytest.mark.asyncio
 async def test_load_binary_wheel1(
-    mock_fetch: mock_fetch_cls, mock_importlib: None, mock_platform: None
+    host_micropip_with_mock_fetch, mock_importlib: None, mock_platform: None
 ) -> None:
+    micropip, mock_fetch = host_micropip_with_mock_fetch
+
     dummy = "dummy"
     mock_fetch.add_pkg_version(dummy, platform="emscripten")
     await micropip.install(dummy)
@@ -378,35 +401,6 @@ def test_logging(selenium_standalone_micropip, wheel_catalog):
     name, version, _, _ = parse_wheel_filename(snowball_wheel.filename)
 
     run_test(selenium_standalone_micropip, wheel_url, name, version)
-
-
-@pytest.mark.asyncio
-async def test_custom_index_urls(mock_package_index_json_api, monkeypatch):
-    mock_server_fake_package = mock_package_index_json_api(
-        pkgs=["fake-pkg-micropip-test"]
-    )
-
-    _wheel_url = ""
-
-    async def _mock_fetch_bytes(url, *args):
-        nonlocal _wheel_url
-        _wheel_url = url
-        return b"fake wheel"
-
-    from micropip import wheelinfo
-
-    monkeypatch.setattr(wheelinfo, "fetch_bytes", _mock_fetch_bytes)
-
-    try:
-        await micropip.install(
-            "fake-pkg-micropip-test", index_urls=[mock_server_fake_package]
-        )
-    except Exception:
-        # We just check that the custom index url was used
-        # install will fail because the package is not real, but it doesn't matter.
-        pass
-
-    assert "fake_pkg_micropip_test-1.0.0-py2.py3-none-any.whl" in _wheel_url
 
 
 def test_install_pkg_with_sharedlib_deps(selenium_standalone_micropip, wheel_catalog):

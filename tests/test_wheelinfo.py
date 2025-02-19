@@ -3,9 +3,9 @@ import pytest
 from micropip.wheelinfo import WheelInfo
 
 
-def test_from_url():
+def test_from_url(host_compat_layer):
     url = "https://test.com/dummy_module-0.0.1-py3-none-any.whl"
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(url, compat_layer=host_compat_layer)
 
     assert wheel.name == "dummy-module"
     assert str(wheel.version) == "0.0.1"
@@ -15,7 +15,7 @@ def test_from_url():
     assert wheel.sha256 is None
 
 
-def test_from_package_index():
+def test_from_package_index(host_compat_layer):
     name = "dummy-module"
     filename = "dummy_module-0.0.1-py3-none-any.whl"
     url = "https://test.com/dummy_module-0.0.1-py3-none-any.whl"
@@ -25,7 +25,7 @@ def test_from_package_index():
     core_metadata = True
 
     wheel = WheelInfo.from_package_index(
-        name, filename, url, version, sha256, size, core_metadata
+        name, filename, url, version, sha256, size, core_metadata, compat_layer=host_compat_layer
     )
 
     assert wheel.name == name
@@ -37,9 +37,9 @@ def test_from_package_index():
     assert wheel.core_metadata == core_metadata
 
 
-def test_extract(wheel_catalog, tmp_path):
+def test_extract(wheel_catalog, tmp_path, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
-    dummy_wheel = WheelInfo.from_url(pytest_wheel.url)
+    dummy_wheel = WheelInfo.from_url(pytest_wheel.url, compat_layer=host_compat_layer)
     dummy_wheel._data = pytest_wheel.content
 
     dummy_wheel._extract(tmp_path)
@@ -47,9 +47,9 @@ def test_extract(wheel_catalog, tmp_path):
     assert dummy_wheel._dist_info.is_dir()
 
 
-def test_set_installer(wheel_catalog, tmp_path):
+def test_set_installer(wheel_catalog, tmp_path, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
-    dummy_wheel = WheelInfo.from_url(pytest_wheel.url)
+    dummy_wheel = WheelInfo.from_url(pytest_wheel.url, compat_layer=host_compat_layer)
     dummy_wheel._data = pytest_wheel.content
 
     dummy_wheel._extract(tmp_path)
@@ -67,9 +67,9 @@ def test_install():
 
 
 @pytest.mark.asyncio
-async def test_download(wheel_catalog):
+async def test_download(wheel_catalog, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
-    wheel = WheelInfo.from_url(pytest_wheel.url)
+    wheel = WheelInfo.from_url(pytest_wheel.url, compat_layer=host_compat_layer)
 
     assert wheel._metadata is None
 
@@ -79,9 +79,9 @@ async def test_download(wheel_catalog):
 
 
 @pytest.mark.asyncio
-async def test_requires(wheel_catalog, tmp_path):
+async def test_requires(wheel_catalog, tmp_path, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
-    wheel = WheelInfo.from_url(pytest_wheel.url)
+    wheel = WheelInfo.from_url(pytest_wheel.url, compat_layer=host_compat_layer)
     await wheel.download({})
 
     wheel._extract(tmp_path)
@@ -96,7 +96,7 @@ async def test_requires(wheel_catalog, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_download_pep658_metadata(wheel_catalog):
+async def test_download_pep658_metadata(wheel_catalog, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
     sha256 = "dummy-sha256"
     size = 1234
@@ -110,6 +110,7 @@ async def test_download_pep658_metadata(wheel_catalog):
         sha256,
         size,
         core_metadata=True,
+        compat_layer=host_compat_layer,
     )
 
     assert wheel_with_metadata.pep658_metadata_available()
@@ -131,6 +132,7 @@ async def test_download_pep658_metadata(wheel_catalog):
         sha256,
         size,
         core_metadata=None,
+        compat_layer=host_compat_layer,
     )
 
     assert not wheel_without_metadata.pep658_metadata_available()
@@ -147,6 +149,7 @@ async def test_download_pep658_metadata(wheel_catalog):
         sha256,
         size,
         core_metadata=None,
+        compat_layer=host_compat_layer,
     )
 
     assert wheel._metadata is None
@@ -186,6 +189,7 @@ async def test_download_pep658_metadata_checksum(wheel_catalog, host_compat_laye
         sha256,
         size,
         core_metadata={"sha256": checksum},
+        compat_layer=host_compat_layer,
     )
 
     assert wheel._metadata is None

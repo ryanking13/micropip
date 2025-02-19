@@ -171,6 +171,7 @@ class ProjectInfo:
                 sha256=sha256,
                 size=size,
                 core_metadata=core_metadata,
+                
             )
 
     @classmethod
