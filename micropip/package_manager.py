@@ -8,11 +8,10 @@ from typing import (  # noqa: UP035 List import is necessary due to the `list` m
     List,
 )
 
-from packaging.markers import default_environment
-
 from . import _mock_package, package_index
 from ._compat import CompatibilityLayer, compatibility_layer
 from ._utils import get_files_in_distribution, get_root
+from ._vendored.packaging.src.packaging.markers import default_environment
 from .constants import FAQ_URLS
 from .freeze import freeze_lockfile
 from .logging import setup_logging
@@ -299,7 +298,11 @@ class PackageManager:
         ``lockFileURL`` of :js:func:`~globalThis.loadPyodide`.
         """
         return freeze_lockfile(
+<<<<<<< HEAD
             self.compat_layer.repodata_packages, self.compat_layer.lockfile_info
+=======
+            self.compat_layer.lockfile_packages, self.compat_layer.lockfile_info
+>>>>>>> upstream/main
         )
 
     def add_mock_package(
