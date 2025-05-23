@@ -49,7 +49,7 @@ jobs:
           pip install pyodide-build
           pyodide xbuildenv install
           DIST_DIR=$(pyodide config get pyodide_root)/dist
-          cp ${DIST_DIR} ./dist
+          cp -r ${DIST_DIR} ./dist
 
       - name: Install requirements
         shell: bash -l {0}
