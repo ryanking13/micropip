@@ -44,7 +44,7 @@ jobs:
           browser-version: ${{ matrix.test-config.runtime-version }}
       
       - name: Prepare pyodide runtime
-        shell: base -l {0}
+        shell: bash -l {0}
         run: |
           pip install pyodide-build
           pyodide xbuildenv install
