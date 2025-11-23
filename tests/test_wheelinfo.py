@@ -3,9 +3,9 @@ import pytest
 from micropip.wheelinfo import WheelInfo
 
 
-def test_from_url():
+def test_from_url(host_compat_layer):
     url = "https://test.com/dummy_module-0.0.1-py3-none-any.whl"
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(host_compat_layer, url)
 
     assert wheel.name == "dummy-module"
     assert str(wheel.version) == "0.0.1"
@@ -15,10 +15,10 @@ def test_from_url():
     assert wheel.sha256 is None
 
 
-def test_from_url_with_percent_encoded_path():
+def test_from_url_with_percent_encoded_path(host_compat_layer):
     # Test URL with percent-encoded characters (+ encoded as %2B in version string)
     url = "https://test.com/dummy_module-1.0.0%2Blocalbuild.1-py3-none-any.whl"
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(host_compat_layer, url)
 
     assert wheel.name == "dummy-module"
     assert str(wheel.version) == "1.0.0+localbuild.1"
@@ -28,7 +28,7 @@ def test_from_url_with_percent_encoded_path():
     assert wheel.sha256 is None
 
 
-def test_from_package_index():
+def test_from_package_index(host_compat_layer):
     name = "dummy-module"
     filename = "dummy_module-0.0.1-py3-none-any.whl"
     url = "https://test.com/dummy_module-0.0.1-py3-none-any.whl"
@@ -38,7 +38,7 @@ def test_from_package_index():
     core_metadata = True
 
     wheel = WheelInfo.from_package_index(
-        name, filename, url, version, sha256, size, core_metadata
+        host_compat_layer, name, filename, url, version, sha256, size, core_metadata
     )
 
     assert wheel.name == name
@@ -51,9 +51,9 @@ def test_from_package_index():
 
 
 @pytest.mark.asyncio
-async def test_download(wheel_catalog):
+async def test_download(wheel_catalog, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
-    wheel = WheelInfo.from_url(pytest_wheel.url)
+    wheel = WheelInfo.from_url(host_compat_layer, pytest_wheel.url)
 
     assert wheel._metadata is None
 
@@ -63,9 +63,9 @@ async def test_download(wheel_catalog):
 
 
 @pytest.mark.asyncio
-async def test_requires(wheel_catalog, tmp_path):
+async def test_requires(wheel_catalog, tmp_path, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
-    wheel = WheelInfo.from_url(pytest_wheel.url)
+    wheel = WheelInfo.from_url(host_compat_layer, pytest_wheel.url)
     await wheel.download({})
 
     wheel._install(tmp_path)
@@ -80,13 +80,14 @@ async def test_requires(wheel_catalog, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_download_pep658_metadata(wheel_catalog):
+async def test_download_pep658_metadata(wheel_catalog, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
     sha256 = "dummy-sha256"
     size = 1234
 
     # 1) metadata available
     wheel_with_metadata = WheelInfo.from_package_index(
+        host_compat_layer,
         pytest_wheel.name,
         pytest_wheel.filename,
         pytest_wheel.url,
@@ -108,6 +109,7 @@ async def test_download_pep658_metadata(wheel_catalog):
 
     # 2) metadata not available
     wheel_without_metadata = WheelInfo.from_package_index(
+        host_compat_layer,
         pytest_wheel.name,
         pytest_wheel.filename,
         pytest_wheel.url,
@@ -124,6 +126,7 @@ async def test_download_pep658_metadata(wheel_catalog):
 
     # 3) the metadata extracted from the wheel should be the same
     wheel = WheelInfo.from_package_index(
+        host_compat_layer,
         pytest_wheel.name,
         pytest_wheel.filename,
         pytest_wheel.url,
@@ -141,12 +144,13 @@ async def test_download_pep658_metadata(wheel_catalog):
 
 
 @pytest.mark.asyncio
-async def test_download_pep658_metadata_checksum(wheel_catalog):
+async def test_download_pep658_metadata_checksum(wheel_catalog, host_compat_layer):
     pytest_wheel = wheel_catalog.get("pytest")
     sha256 = "dummy-sha256"
     size = 1234
 
     wheel = WheelInfo.from_package_index(
+        host_compat_layer,
         pytest_wheel.name,
         pytest_wheel.filename,
         pytest_wheel.url,
@@ -162,6 +166,7 @@ async def test_download_pep658_metadata_checksum(wheel_catalog):
 
     checksum = "62eb95408ccec185e7a3b8f354a1df1721cd8f463922f5a900c7bf4b69c5a4e8"  # TODO: calculate this from the file
     wheel = WheelInfo.from_package_index(
+        host_compat_layer,
         pytest_wheel.name,
         pytest_wheel.filename,
         pytest_wheel.url,

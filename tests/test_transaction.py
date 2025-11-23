@@ -18,11 +18,11 @@ from micropip._vendored.packaging.src.packaging.tags import Tag
     "protocol",
     ["http:", "https:", "file:", "emfs:", ""],
 )
-def test_parse_wheel_url1(protocol, path):
+def test_parse_wheel_url1(protocol, path, host_compat_layer):
     from micropip.transaction import WheelInfo
 
     url = protocol + path
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(host_compat_layer, url)
 
     assert wheel.name == "snowballstemmer"
     assert str(wheel.version) == "2.0.0"
@@ -34,20 +34,20 @@ def test_parse_wheel_url1(protocol, path):
     )
 
 
-def test_parse_wheel_url2():
+def test_parse_wheel_url2(host_compat_layer):
     from micropip.transaction import WheelInfo
 
     msg = r"Invalid wheel filename \(wrong number of parts\)"
     with pytest.raises(ValueError, match=msg):
         url = "https://a/snowballstemmer-2.0.0-py2.whl"
-        WheelInfo.from_url(url)
+        WheelInfo.from_url(host_compat_layer, url)
 
 
-def test_parse_wheel_url3():
+def test_parse_wheel_url3(host_compat_layer):
     from micropip.transaction import WheelInfo
 
     url = "http://a/scikit_learn-0.22.2.post1-cp35-cp35m-macosx_10_9_intel.whl"
-    wheel = WheelInfo.from_url(url)
+    wheel = WheelInfo.from_url(host_compat_layer, url)
     assert wheel.name == "scikit-learn"
     assert wheel.tags == frozenset({Tag("cp35", "cp35m", "macosx_10_9_intel")})
 
@@ -154,7 +154,7 @@ async def test_install_non_pure_python_wheel(host_compat_layer):
         await transaction.add_requirement(url)
 
 
-def _pypi_metadata(package, versions_to_tags):
+def _pypi_metadata(package, versions_to_tags, compat_layer):
     # Build package release metadata as would be returned from
     # https://pypi.org/pypi/{pkgname}/json
     #
@@ -181,17 +181,19 @@ def _pypi_metadata(package, versions_to_tags):
         releases[version] = release
 
     metadata = {"releases": releases}
-    return ProjectInfo.from_json_api(metadata)
+    return ProjectInfo.from_json_api(compat_layer, metadata)
 
 
-def test_last_version_from_pypi():
+def test_last_version_from_pypi(host_compat_layer):
     from micropip._vendored.packaging.src.packaging.requirements import Requirement
     from micropip.transaction import find_wheel
 
     requirement = Requirement("dummy_module")
     versions = ["0.0.1", "0.15.5", "0.9.1"]
 
-    metadata = _pypi_metadata("dummy_module", {v: ["py3"] for v in versions})
+    metadata = _pypi_metadata(
+        "dummy_module", {v: ["py3"] for v in versions}, host_compat_layer
+    )
 
     # get version number from find_wheel
     wheel = find_wheel(metadata, requirement)
@@ -199,7 +201,7 @@ def test_last_version_from_pypi():
     assert str(wheel.version) == "0.15.5"
 
 
-def test_find_wheel_invalid_version():
+def test_find_wheel_invalid_version(host_compat_layer):
     """Check that if the one version on PyPi is unparsable
 
     it should be skipped instead of producing an error
@@ -210,7 +212,9 @@ def test_find_wheel_invalid_version():
     requirement = Requirement("dummy_module")
     versions = ["0.0.1", "0.15.5", "0.9.1", "2004d"]
 
-    metadata = _pypi_metadata("dummy_module", {v: ["py3"] for v in versions})
+    metadata = _pypi_metadata(
+        "dummy_module", {v: ["py3"] for v in versions}, host_compat_layer
+    )
 
     # get version number from find_wheel
     wheel = find_wheel(metadata, requirement)
@@ -218,7 +222,7 @@ def test_find_wheel_invalid_version():
     assert str(wheel.version) == "0.15.5"
 
 
-def test_yanked_version():
+def test_yanked_version(host_compat_layer):
     from micropip._vendored.packaging.src.packaging.requirements import Requirement
     from micropip.transaction import find_wheel
 
@@ -226,7 +230,9 @@ def test_yanked_version():
 
     # Mark 0.15.5 as yanked
     # convert generator --> list and monkeypatch the yanked value
-    metadata = _pypi_metadata("dummy_module", {v: ["py3"] for v in versions})
+    metadata = _pypi_metadata(
+        "dummy_module", {v: ["py3"] for v in versions}, host_compat_layer
+    )
     for version in list(metadata.releases):
         wheels = list(metadata.releases[version])
         for wheel in wheels:
@@ -278,14 +284,16 @@ _best_tag_test_cases = (
 
 
 @pytest.mark.parametrize(*_best_tag_test_cases)
-def test_best_tag_from_pypi(package, version, incompatible_tags, compatible_tags):
+def test_best_tag_from_pypi(
+    package, version, incompatible_tags, compatible_tags, host_compat_layer
+):
     from micropip._vendored.packaging.src.packaging.requirements import Requirement
     from micropip.transaction import find_wheel
 
     requirement = Requirement(package)
     tags = incompatible_tags + compatible_tags
 
-    metadata = _pypi_metadata(package, {version: tags})
+    metadata = _pypi_metadata(package, {version: tags}, host_compat_layer)
 
     wheel = find_wheel(metadata, requirement)
 
@@ -310,7 +318,7 @@ def test_best_tag_from_pypi(package, version, incompatible_tags, compatible_tags
     ],
 )
 def test_last_version_and_best_tag_from_pypi(
-    package, old_version, new_version, old_tags, new_tags
+    package, old_version, new_version, old_tags, new_tags, host_compat_layer
 ):
     from micropip._vendored.packaging.src.packaging.requirements import Requirement
     from micropip.transaction import find_wheel
@@ -320,6 +328,7 @@ def test_last_version_and_best_tag_from_pypi(
     metadata = _pypi_metadata(
         package,
         {old_version: old_tags, new_version: new_tags},
+        host_compat_layer,
     )
 
     wheel = find_wheel(metadata, requirement)

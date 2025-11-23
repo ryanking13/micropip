@@ -7,12 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import ParseResult, unquote, urlparse
 
-from ._compat import (
-    fetch_bytes,
-    install,
-    loadedPackages,
-    to_js,
-)
+from ._compat import CompatibilityLayer
 from ._utils import best_compatible_tag_index, parse_wheel_filename
 from ._vendored.packaging.src.packaging.requirements import Requirement
 from ._vendored.packaging.src.packaging.tags import Tag
@@ -33,6 +28,8 @@ class WheelInfo:
     """
     WheelInfo represents a wheel file and its metadata (e.g. URL and hash)
     """
+
+    _compat_layer: type[CompatibilityLayer]
 
     name: str
     version: Version
@@ -73,7 +70,7 @@ class WheelInfo:
         return self._best_tag_index
 
     @classmethod
-    def from_url(cls, url: str) -> "WheelInfo":
+    def from_url(cls, compat_layer: type[CompatibilityLayer], url: str) -> "WheelInfo":
         """Parse wheels URL and extract available metadata
 
         See https://www.python.org/dev/peps/pep-0427/#file-name-convention
@@ -91,6 +88,7 @@ class WheelInfo:
         file_name = Path(unquote(parsed_url.path)).name
         name, version, build, tags = parse_wheel_filename(file_name)
         return WheelInfo(
+            _compat_layer=compat_layer,
             name=name,
             version=version,
             filename=file_name,
@@ -103,6 +101,7 @@ class WheelInfo:
     @classmethod
     def from_package_index(
         cls,
+        compat_layer: type[CompatibilityLayer],
         name: str,
         filename: str,
         url: str,
@@ -118,6 +117,7 @@ class WheelInfo:
         _, _, build, tags = parse_wheel_filename(filename)
 
         return WheelInfo(
+            _compat_layer=compat_layer,
             name=name,
             version=version,
             filename=filename,
@@ -211,7 +211,7 @@ class WheelInfo:
                 f"Cannot download from a non-remote location: {url!r} ({self.parsed_url!r})"
             )
         try:
-            bytes = await fetch_bytes(url, fetch_kwargs)
+            bytes = await self._compat_layer.fetch_bytes(url, fetch_kwargs)
             return bytes
         except OSError as e:
             if self.parsed_url.hostname in [
@@ -247,15 +247,15 @@ class WheelInfo:
                 sorted(x.name for x in self._requires)
             )
 
-        await install(
+        await self._compat_layer.install(
             # TODO: Probably update install API to accept bytes directly, instead of converting it to JS.
-            to_js(self._data),
+            self._compat_layer.to_js(self._data),
             self.filename,
             str(target),
             metadata,
         )
 
-        setattr(loadedPackages, self._project_name, wheel_source)
+        setattr(self._compat_layer.loadedPackages, self._project_name, wheel_source)
 
 
 def _validate_sha256_checksum(data: bytes, expected: str | None = None) -> None:

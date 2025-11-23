@@ -42,7 +42,9 @@ class ProjectInfo:
     releases: dict[Version, Generator[WheelInfo, None, None]]
 
     @staticmethod
-    def from_json_api(data: str | bytes | dict[str, Any]) -> "ProjectInfo":
+    def from_json_api(
+        compat_layer: type[CompatibilityLayer], data: str | bytes | dict[str, Any]
+    ) -> "ProjectInfo":
         """
         Parse JSON API response
 
@@ -67,10 +69,12 @@ class ProjectInfo:
 
             releases[version] = fileinfo
 
-        return ProjectInfo._compatible_only(name, releases)
+        return ProjectInfo._compatible_only(compat_layer, name, releases)
 
     @staticmethod
-    def from_simple_json_api(data: str | bytes | dict[str, Any]) -> "ProjectInfo":
+    def from_simple_json_api(
+        compat_layer: type[CompatibilityLayer], data: str | bytes | dict[str, Any]
+    ) -> "ProjectInfo":
         """
         Parse Simple JSON API response
 
@@ -81,11 +85,14 @@ class ProjectInfo:
         name, releases = ProjectInfo._parse_pep691_response(
             data_dict, index_base_url=""
         )
-        return ProjectInfo._compatible_only(name, releases)
+        return ProjectInfo._compatible_only(compat_layer, name, releases)
 
     @staticmethod
     def from_simple_html_api(
-        data: str, pkgname: str, index_base_url: str
+        compat_layer: type[CompatibilityLayer],
+        data: str,
+        pkgname: str,
+        index_base_url: str,
     ) -> "ProjectInfo":
         """
         Parse Simple HTML API response
@@ -94,7 +101,7 @@ class ProjectInfo:
         """
         project_detail = from_project_details_html(data, pkgname)
         name, releases = ProjectInfo._parse_pep691_response(project_detail, index_base_url)  # type: ignore[arg-type]
-        return ProjectInfo._compatible_only(name, releases)
+        return ProjectInfo._compatible_only(compat_layer, name, releases)
 
     @staticmethod
     def _parse_pep691_response(
@@ -140,7 +147,11 @@ class ProjectInfo:
 
     @classmethod
     def _compatible_wheels(
-        cls, files: list[dict[str, Any]], version: Version, name: str
+        cls,
+        compat_layer: type[CompatibilityLayer],
+        files: list[dict[str, Any]],
+        version: Version,
+        name: str,
     ) -> Generator[WheelInfo, None, None]:
         for file in files:
             filename = file["filename"]
@@ -169,6 +180,7 @@ class ProjectInfo:
             yanked_reason = file.get("yanked", False)
 
             yield WheelInfo.from_package_index(
+                compat_layer=compat_layer,
                 name=name,
                 filename=filename,
                 url=file["url"],
@@ -182,7 +194,10 @@ class ProjectInfo:
 
     @classmethod
     def _compatible_only(
-        cls, name: str, releases: dict[Version, list[dict[str, Any]]]
+        cls,
+        compat_layer: type[CompatibilityLayer],
+        name: str,
+        releases: dict[Version, list[dict[str, Any]]],
     ) -> "ProjectInfo":
         """
         Return a generator of wheels compatible with the current platform.
@@ -190,7 +205,7 @@ class ProjectInfo:
         """
 
         releases_compatible = {
-            version: cls._compatible_wheels(files, version, name=name)
+            version: cls._compatible_wheels(compat_layer, files, version, name=name)
             for version, files in releases.items()
         }
 
@@ -246,7 +261,7 @@ def _contain_placeholder(url: str, placeholder: str = "package_name") -> bool:
 
 def _select_parser(
     content_type: str, pkgname: str, index_base_url: str
-) -> Callable[[str], ProjectInfo]:
+) -> Callable[[type[CompatibilityLayer], str], ProjectInfo]:
     """
     Select the function to parse the response based on the content type.
     """
@@ -331,7 +346,7 @@ async def query_package(
             parser = _select_parser(content_type, name, index_base_url=url)
         except ValueError as e:
             raise ValueError(f"Error trying to decode url: {url}") from e
-        return parser(metadata)
+        return parser(compat_layer, metadata)
     else:
         raise ValueError(
             f"Can't fetch metadata for '{name}'. "

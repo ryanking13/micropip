@@ -240,7 +240,8 @@ class Wildcard:
 
 
 class mock_fetch_cls:
-    def __init__(self):
+    def __init__(self, compat_layer=None):
+        self._compat_layer = compat_layer
         self.releases_map = {}
         self.metadata_map = {}
         self.top_level_map = {}
@@ -314,7 +315,9 @@ class mock_fetch_cls:
         from micropip.package_index import ProjectInfo
 
         try:
-            return ProjectInfo.from_json_api(self.releases_map[pkgname])
+            return ProjectInfo.from_json_api(
+                self._compat_layer, self.releases_map[pkgname]
+            )
         except KeyError as e:
             raise ValueError(
                 f"Can't fetch metadata for '{pkgname}' from PyPI. "
@@ -324,7 +327,7 @@ class mock_fetch_cls:
     async def _fetch_bytes(self, url, kwargs):
         from micropip.transaction import WheelInfo
 
-        wheel_info = WheelInfo.from_url(url)
+        wheel_info = WheelInfo.from_url(self._compat_layer, url)
         version = wheel_info.version
         name = wheel_info.name
         filename = wheel_info.filename
@@ -351,12 +354,12 @@ class mock_fetch_cls:
 
 
 @pytest.fixture
-def mock_fetch(monkeypatch, mock_importlib):
-    from micropip import package_index, wheelinfo
+def mock_fetch(monkeypatch, mock_importlib, host_compat_layer):
+    from micropip import package_index
 
-    result = mock_fetch_cls()
+    result = mock_fetch_cls(host_compat_layer)
     monkeypatch.setattr(package_index, "query_package", result.query_package)
-    monkeypatch.setattr(wheelinfo, "fetch_bytes", result._fetch_bytes)
+    monkeypatch.setattr(host_compat_layer, "fetch_bytes", result._fetch_bytes)
     return result
 
 
@@ -469,3 +472,15 @@ def host_compat_layer():
     from micropip._compat._compat_not_in_pyodide import CompatibilityNotInPyodide
 
     yield CompatibilityNotInPyodide
+
+
+@pytest.fixture
+def host_package_manager(host_compat_layer):
+    """
+    Fixture to provide a package manager for the host environment.
+    """
+    from micropip.package_manager import PackageManager
+
+    package_manager = PackageManager(compat=host_compat_layer)
+
+    yield package_manager

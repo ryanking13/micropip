@@ -11,7 +11,7 @@ from typing import (  # noqa: UP035 List import is necessary due to the `list` m
 )
 
 from . import _mock_package, package_index
-from ._compat import CompatibilityLayer, compatibility_layer
+from ._compat import CompatibilityLayer
 from ._utils import get_files_in_distribution, get_root
 from ._vendored.packaging.src.packaging.markers import default_environment
 from .constants import FAQ_URLS
@@ -29,16 +29,10 @@ class PackageManager:
     independent of other instances.
     """
 
-    def __init__(self, compat: type[CompatibilityLayer] | None = None) -> None:
-
-        if compat is None:
-            compat = compatibility_layer
-
+    def __init__(self, compat: type[CompatibilityLayer]) -> None:
         self.index_urls = package_index.DEFAULT_INDEX_URLS[:]
         self.compat_layer: type[CompatibilityLayer] = compat
         self.constraints: list[str] = []
-
-        pass
 
     async def install(
         self,

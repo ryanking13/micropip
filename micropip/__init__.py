@@ -5,7 +5,7 @@ try:
 except ImportError:
     pass
 
-from ._compat import compatibility_layer
+from ._compat import CompatibilityLayer, compatibility_layer
 
 _package_manager_singleton = PackageManager(compatibility_layer)
 
@@ -20,6 +20,7 @@ remove_mock_package = _package_manager_singleton.remove_mock_package
 uninstall = _package_manager_singleton.uninstall
 
 __all__ = [
+    "CompatibilityLayer",
     "install",
     "list",
     "freeze",

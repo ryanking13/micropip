@@ -98,7 +98,7 @@ class Transaction:
     async def add_requirement_from_url(
         self, req: str, extras: set[str] | None = None
     ) -> None:
-        wheel = WheelInfo.from_url(req)
+        wheel = WheelInfo.from_url(self._compat_layer, req)
         check_compatible(wheel.filename)
         return await self.add_wheel(wheel, extras=extras or set(), specifier="")
 
